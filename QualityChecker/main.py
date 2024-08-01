@@ -1,6 +1,4 @@
 """
-hghhcgfchgbgh
-
 
 """
 import logging
@@ -20,7 +18,6 @@ from utils.utils import to_flat_list, read_file_content
 if __name__ == '__main__':
     print('Погнали')
 
-# connection = cfg.connection
 ENV = 'DEV'
 connection = vertica_conn_dict[ENV]
 
@@ -33,7 +30,7 @@ check_type_list = ['all_cols']
 # 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11....2, 3, 4, 5, 6, 7, 8, 9,
 # Ниже перечислить номера проверок
 dialect = 'Vertica'
-checks = [2, 3, 5, 8, 10, 13, 1, 11, 12, 9, 14]
+checks = [2, 3, 4, 5, 6, 7, 8, 10, 13, 1, 11, 12, 9, 14]
 # checks = [10]
 # 1. Дубли по ключам
 # 2. Полностью пустые столбцы (NULL или '')
@@ -52,7 +49,6 @@ checks = [2, 3, 5, 8, 10, 13, 1, 11, 12, 9, 14]
 
 
 # -------------------------------------------------------------
-# path = os.path.join(os.path.abspath(os.path.dirname(__file__)))
 path = os.path.dirname(os.path.abspath(__file__))
 sql_query = read_file_content(f'{path}/get_tables_sql_query.sql')
 
@@ -105,14 +101,12 @@ for obj in obj_list:
     if bool(run_sql(dialect, f'select 1 from {schema}.{table} limit 1', connection)):
         table_df.append(table)
         schema_df.append(schema)
-        # Получаем все поля таблицы
         all_columns_list = select_columns(dialect, path, 'all', schema, table, connection)
         text_columns_list = select_columns(dialect, path, 'text', schema, table, connection)
         for col in all_columns_list:
             col_table_df.append(table)
             col_schema_df.append(schema)
             col_df.append(col)
-        # main_check(schema, table, all_columns_list, check_list,  connection)
         if 1 in checks:
             print('1. Проверка дублей по ключу')
             check_pk_doubles_df.append(check_pk_doubles(dialect, schema, table, connection))
@@ -278,14 +272,14 @@ for obj in obj_list:
             writer = pandas.ExcelWriter(f'{path}/reports/{report_name}_{b}.xlsx')
             df_result1.to_excel(writer, sheet_name='General', index=False)
             df_result2.to_excel(writer, sheet_name='Detail', index=False)
-            writer.save()
+            writer.close()
 
         else:
             writer = pandas.ExcelWriter(f'{path}/reports/{report_name}_{b}.xlsx')
 
             df_list1.to_excel(writer, sheet_name='General', index=False)
             df_list2.to_excel(writer, sheet_name='Detail', index=False)
-            writer.save()
+            writer.close()
 
     else:
         logging.warning(f'Таблица {schema}.{table} пустая')
@@ -296,61 +290,3 @@ print(f'Check Results in `QualityChecker/reports/{report_name}_{b}.xlsx')
 print(empty_tables)
 print(b)
 print(time.strftime("%Y-%m-%d_%H-%M"))
-
-"""list1_all_options_dict = {
-    'pk_doubles': check_pk_doubles_df,
-    'max_ts_ods': check_max_tech_load_ts_df,
-    'null_fields': count_null_cols_df,
-    'max_length': count_max_length_df,
-    'not_utf8': count_not_utf8_cols_df,
-    'stg_row_count': check_row_count_stg_df,
-    'ods_row_count': check_row_count_ods_df,
-    'segmentation': check_segmentation_df}
-
-list2_all_options_dict = {
-    'null_cols': not_null_df,
-    'not_utf8': not_utf8_df,
-    'max_length': max_length_df,
-    'Consist': stat_most_cons_val_df,
-    'length stat': check_columns_length_statistics_result_df
-}
-
-number_of_check_in_checks_variable_1 = {
-    'pk_doubles': 1,
-    'max_ts_ods': 5,
-    'null_fields': 2,
-    'max_length': 3,
-    'not_utf8': 4,
-    'stg_row_count': 10,
-    'ods_row_count': 11,
-    'segmentation': 9
-}
-
-number_of_check_in_checks_variable_2 = {
-    'null_cols': 2,
-    'not_utf8': 4,
-    'max_length': 3,
-    'Consist': 7,
-    'length stat': 8
-}
-
-list1_df_components_dict = {}
-list1_df_components_dict['schema'] = schema_df
-list1_df_components_dict['table'] = table_df
-list1_df_components_dict.update({key: list1_all_options_dict[key] for key in list1_all_options_dict if number_of_check_in_checks_variable_1.get(key, None) in checks})
-
-list2_df_components_dict = {}
-list2_df_components_dict['schema'] = col_schema_df
-list2_df_components_dict['table'] = col_table_df
-list2_df_components_dict['column'] = col_df
-list2_df_components_dict.update({key: list2_all_options_dict[key] for key in list2_all_options_dict if number_of_check_in_checks_variable_2.get(key, None) in checks})
-
-df_list1 = pandas.DataFrame(list1_df_components_dict)
-df_list2 = pandas.DataFrame(list2_df_components_dict)
-
-writer = pandas.ExcelWriter(f'{path}/reports/{schema}_{b}.xlsx')
-print(f'Check Results in `QualityChecker/reports/{schema}_{b}.xlsx`')
-
-df_list1.to_excel(writer, sheet_name='General')
-df_list2.to_excel(writer, sheet_name='Detail')
-writer._save()"""
