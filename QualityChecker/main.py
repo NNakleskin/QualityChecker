@@ -21,12 +21,6 @@ if __name__ == '__main__':
 ENV = 'DEV'
 connection = vertica_conn_dict[ENV]
 
-"""check_list = ['max_length', 'check_pk_doubles', 'not_utf8', 'check_insert_new_rows',
-              'check_most_consistent_value', 'check_columns_length_statistics', 'check_max_tech_load_ts',
-              'check_row_count', 'check_null_fields']"""
-check_list = ['check_most_consistent_value', 'check_null_fields']
-check_type_list = ['all_cols']
-
 # 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11....2, 3, 4, 5, 6, 7, 8, 9,
 # Ниже перечислить номера проверок
 dialect = 'Vertica'

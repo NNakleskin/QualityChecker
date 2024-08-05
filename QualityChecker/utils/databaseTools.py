@@ -12,10 +12,10 @@ def run_sql(dialect: str ,sql_script: str, vertica_conn_dict: dict):
     """
     if dialect == 'Vertica':
     	with vertica_python.connect(**vertica_conn_dict) as connection:
-        	cur = connection.cursor()
-        	cur.execute(sql_script)
-        	result = cur.fetchall()
-        	return result
+            cur = connection.cursor()
+            cur.execute(sql_script)
+            result = cur.fetchall()
+            return result
 
 
 def select_columns(dialect, cur_path, col_type,  schema, table, connection):

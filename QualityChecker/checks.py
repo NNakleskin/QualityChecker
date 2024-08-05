@@ -260,28 +260,3 @@ def check_bussines_key_counts(dialect, schema, table, vertica_conn_dict):
 
     else:
         logging.warning(f'Первичного ключа нет')
-
-"""def main_check(dialect, schema, table, all_columns_list, check_list, connection):
-    check_type = 'all_col'
-    for check in check_list:
-        if check_type == 'table':
-            exec(f'result = to_flat_list({check}({schema},{table}, {connection}))')
-            exec(f'{check}_df.append({result}[0])')
-        if check_type == 'all_col':
-            for col in all_columns_list:
-                cnt = 0
-                print(f'result = to_flat_list({check}(\'{schema}\',\'{table}\',\'{col}\',{connection}))')
-                result = eval(f'to_flat_list({check}(\'{schema}\',\'{table}\',\'{col}\',{connection}))')
-                if result[0] == 1:
-                    cnt = cnt + 1
-                exec(f'count_{check}_df.appencd({cnt})')
-                exec(f'{check}_df.append({result}[0])')
-        if check_type == 'text_cols':
-            for col in all_columns_list:
-                if col in text_columns_list:
-                    cnt = 0
-                    exec(f'result = to_flat_list({check}({schema},{table},{col},{connection}))')
-                    if result[0] == 1:
-                        cnt = cnt + 1
-                    exec(f'count_{check}_df.appencd({cnt})')
-                    exec(f'{check}_df.append({result}[0])')"""
