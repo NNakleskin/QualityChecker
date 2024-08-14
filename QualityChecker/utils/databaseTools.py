@@ -1,6 +1,6 @@
-import vertica_python
+import vertica_python  # type: ignore
 from utils.utils  import to_flat_list, read_file_content
-import psycopg2
+import psycopg2  # type: ignore
 
 
 
