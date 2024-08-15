@@ -1,5 +1,5 @@
 SELECT
     1
 FROM {schema}.{table}
-WHERE convert_to(to_char({column}), 'UTF8')::text <> to_char({column})
+WHERE convert_to({column}::text, 'UTF8')::text <> {column}::text
 LIMIT 1;
