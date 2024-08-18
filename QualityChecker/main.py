@@ -30,10 +30,12 @@ from DataQuality import DataQuality
 # -------------------------------------------------------------
 
 
-def get_tables(path: str):
-    path = os.path.dirname(os.path.abspath(__file__))
-    sql_query = read_file_content(f'{path}/get_tables_sql_query.sql')
-
+def get_tables(path: str, query):
+    if query == None:
+        path = os.path.dirname(os.path.abspath(__file__))
+        sql_query = read_file_content(f'{path}/get_tables_sql_query.sql')
+    else:
+        sql_query = query
     obj_list = run_sql(
         dialect,
         sql_query,
@@ -43,9 +45,7 @@ def get_tables(path: str):
 
 def main():
     path = os.path.dirname(os.path.abspath(__file__))
-
-    obj_list = get_tables(path=path)
-
+    obj_list = get_tables(path=path, query=query)
     empty_tables = []
     b = time.strftime("%Y-%m-%d_%H-%M")
     report_name = f'{ENV}_report'
@@ -55,10 +55,14 @@ def main():
         table_obj.checks = checks_list
         print(f'Начало проверки таблицы  {table_obj.schema}.{table_obj.table}  select analyze_statistics(\'{table_obj.schema}.{table_obj.table}\')')
         print(time.strftime("%Y-%m-%d %H:%M"))
+# -------------------------------------------------------------
+# Это костыль, как его переделать чтобы оно не выглядело костыльно и было более масштабируемо я пока не придумал. Если есть идеи - буду рад рассмотреть.
+# -------------------------------------------------------------
         if dialect == 'Vertica':
             run_sql(dialect, f'select analyze_statistics(\'{table_obj.schema}.{table_obj.table}\')', connection)
         elif dialect == 'Greenplum':
             run_sql(dialect, f'ANALYZE {table_obj.schema}.{table_obj.table};', connection)
+# -------------------------------------------------------------
         if bool(run_sql(dialect, f'select 1 from {table_obj.schema}.{table_obj.table} limit 1', connection)):
             table_obj.execute_checks(dialect, path, connection)
             table_obj.create_xlsx(path, report_name, b)
@@ -74,12 +78,8 @@ def main():
 
 
 if __name__ == '__main__':
-    global ENV
-    global connection
-    global dialect
-    global checks_list
-    ENV = 'DEV'
-    connection = vertica_conn_dict[ENV]
+    global ENV, connection, dialect, checks_list, query
+    ENV = ''
     dialect = ''
     checks_list = []
     print("Какое окружение?\n",
@@ -93,21 +93,20 @@ if __name__ == '__main__':
         ENV = 'TEST'
     elif env_no == 3:
         ENV = 'PROD'
-    while(True):
-        print("Какой диалект нужен?\n",
-            "[1] - Vertica\n",
-            "[2] - Greenplum\n")
-        response = int(input())
-        if response == 1:
-            dialect = 'Vertica'
-            connection = vertica_conn_dict[ENV]
-            break
-        elif response == 2:
-            dialect = 'Greenplum'
-            connection = greenplum_conn_dict[ENV]
-            break
-        else:
-            print("Error: Unexpected value\n")
+    else:
+        raise TypeError
+    print("Какой диалект нужен?\n",
+        "[1] - Vertica\n",
+        "[2] - Greenplum\n")
+    response = int(input())
+    if response == 1:
+        dialect = 'Vertica'
+        connection = vertica_conn_dict[ENV]
+    elif response == 2:
+        dialect = 'Greenplum'
+        connection = greenplum_conn_dict[ENV]
+    else:
+        raise TypeError
     print("Перечислите через запятую номера проверок\n",
           "0. Все\n"
           "1. Дубли по ключам\n",
@@ -127,5 +126,17 @@ if __name__ == '__main__':
     checks_list = list(map(int, input().split(',')))
     if 0 in checks_list:
         checks_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+
+    print("Вы хотите использовать скрипт для получения таблиц из директории или ввести его здесь?\n",
+          "[1] - Из директории",
+          "[2] - Ввести тут",)
+    response = int(input())
+    if response == 1:
+        query = None
+    elif response == 2:
+        print("Введите запрос. Запрос должен быть введен одной строкой.")
+        query = str(input())
+    else:
+        raise TypeError
     print(ENV, dialect, checks_list)
     main()
