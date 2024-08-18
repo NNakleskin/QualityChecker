@@ -1,13 +1,13 @@
+import traceback
+import pandas  # type: ignore
+import os
+
 from checks import max_length, check_pk_doubles, not_utf8, check_insert_new_rows, \
     check_most_consistent_value, check_columns_length_statistics, check_max_tech_load_ts, check_row_count, \
-    check_null_fields, check_segmentation, check_bussines_key_counts  # , main_check
+    check_null_fields, check_segmentation, check_bussines_key_counts
 
 from utils.utils import to_flat_list
 from utils.databaseTools import select_columns
-import traceback
-import pandas  # type: ignore
-
-import os
 
 
 class DataQuality:
