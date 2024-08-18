@@ -385,7 +385,6 @@ $RECYCLE.BIN/
 *.lnks
 
 */poetry.lock
-*/pyproject.toml
 */get_tables_sql_query.sql.sql
 */config.json
 */conf.py
