@@ -9,7 +9,7 @@ path = os.path.dirname(os.path.abspath(__file__))
 
 def check_null_fields(dialect, schema, table, column, vertica_conn_dict):
     script = read_file_content(
-        f'{path}/sql/DQ/ansi/check_not_nulls_columns.sql').format(
+        f'{path}/sql/DQ/{dialect.lower()}/check_not_nulls_columns.sql').format(
         table=table, schema=schema, column=column)
     result = run_sql(dialect, script, vertica_conn_dict)
     if not result:
