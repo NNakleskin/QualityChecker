@@ -31,6 +31,25 @@ from DataQuality import DataQuality
 
 
 def get_tables(path: str, query):
+    """
+    Выполняет SQL-запрос для получения списка таблиц и возвращает результат.
+
+    Если передан параметр `query`, он используется для выполнения запроса. 
+    Если `query` равен `None`, функция загружает SQL-запрос из файла `get_tables_sql_query.sql`, 
+    расположенного в указанной директории.
+
+    Параметры:
+    ----------
+    path : str
+        Путь к директории, где находится SQL-запрос, если `query` не указан.
+    query : str
+        SQL-запрос для выполнения. Если `None`, используется запрос из файла.
+
+    Возвращает:
+    -----------
+    list
+        Список таблиц, полученных в результате выполнения SQL-запроса.
+    """
     if query == None:
         path = os.path.dirname(os.path.abspath(__file__))
         sql_query = read_file_content(f'{path}/get_tables_sql_query.sql')
