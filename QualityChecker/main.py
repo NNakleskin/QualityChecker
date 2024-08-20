@@ -74,15 +74,10 @@ def main():
         table_obj.checks = checks_list
         print(f'Начало проверки таблицы  {table_obj.schema}.{table_obj.table}  select analyze_statistics(\'{table_obj.schema}.{table_obj.table}\')')
         print(time.strftime("%Y-%m-%d %H:%M"))
-# -------------------------------------------------------------
-# Это костыль, как его переделать чтобы оно не выглядело костыльно и было более масштабируемо я пока не придумал. 
-# Если есть идеи - буду рад рассмотреть.
-# -------------------------------------------------------------
-        if dialect == 'Vertica':
-            run_sql(dialect, f'select analyze_statistics(\'{table_obj.schema}.{table_obj.table}\')', connection)
-        elif dialect == 'Greenplum':
-            run_sql(dialect, f'ANALYZE {table_obj.schema}.{table_obj.table};', connection)
-# -------------------------------------------------------------
+        script = read_file_content(
+        f'{path}/sql/work_with_meta/{dialect.lower()}/analyze_statistics.sql').format(
+        table=table_obj.table, schema=table_obj.schema)
+        run_sql(dialect, script, conn_dict=connection)
         if bool(run_sql(dialect, f'select 1 from {table_obj.schema}.{table_obj.table} limit 1', connection)):
             table_obj.execute_checks(dialect, path, connection)
             table_obj.create_xlsx(path, report_name, b)
@@ -98,7 +93,7 @@ def main():
 
 
 if __name__ == '__main__':
-    global ENV, connection, dialect, checks_list, query
+    global ENV, connection, dialect, checks_list, query, conn_dict
     ENV = ''
     dialect = ''
     checks_list = []
