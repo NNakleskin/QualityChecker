@@ -62,7 +62,7 @@ def get_tables(path: str, query: str) -> list:
     return obj_list
 
 
-def main():
+def main(query: str, ENV: str, checks_list: list):
     path = os.path.dirname(os.path.abspath(__file__))
     obj_list = get_tables(path=path, query=query)
     empty_tables = []
@@ -93,11 +93,11 @@ def main():
 
 
 if __name__ == '__main__':
-    global ENV, connection, dialect, checks_list, query, conn_dict
+    global connection, dialect
     ENV = ''
     dialect = ''
     checks_list = []
-    logging.info("Какое окружение?\n",
+    print("Какое окружение?\n",
           "[1] DEV\n",
           "[2] TEST\n",
           "[3] PROD\n",)
@@ -110,7 +110,7 @@ if __name__ == '__main__':
         ENV = 'PROD'
     else:
         raise TypeError
-    logging.info("Какой диалект нужен?\n",
+    print("Какой диалект нужен?\n",
         "[1] - Vertica\n",
         "[2] - Greenplum\n")
     response = int(input())
@@ -122,7 +122,7 @@ if __name__ == '__main__':
         connection = greenplum_conn_dict[ENV]
     else:
         raise TypeError
-    logging.info("Перечислите через запятую номера проверок\n",
+    print("Перечислите через запятую номера проверок\n",
           "0. Все\n"
           "1. Дубли по ключам\n",
           "2. Полностью пустые столбцы (NULL или '')\n",
@@ -142,16 +142,16 @@ if __name__ == '__main__':
     if 0 in checks_list:
         checks_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 
-    logging.info("Вы хотите использовать скрипт для получения таблиц из директории или ввести его здесь?\n",
+    print("Вы хотите использовать скрипт для получения таблиц из директории или ввести его здесь?\n",
           "[1] - Из директории",
           "[2] - Ввести тут",)
     response = int(input())
     if response == 1:
         query = None
     elif response == 2:
-        logging.info("Введите запрос. Запрос должен быть введен одной строкой.")
+        print("Введите запрос. Запрос должен быть введен одной строкой.")
         query = str(input())
     else:
         raise TypeError
     logging.info(ENV, dialect, checks_list)
-    main()
+    main(query=query, ENV=ENV, checks_list=checks_list)
