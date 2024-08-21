@@ -68,12 +68,12 @@ def main():
     empty_tables = []
     b = time.strftime("%Y-%m-%d_%H-%M")
     report_name = f'{ENV}_report'
-    print(obj_list)
+    logging.info(obj_list)
     for obj in obj_list:
         table_obj = DataQuality(obj)
         table_obj.checks = checks_list
-        print(f'Начало проверки таблицы  {table_obj.schema}.{table_obj.table}  select analyze_statistics(\'{table_obj.schema}.{table_obj.table}\')')
-        print(time.strftime("%Y-%m-%d %H:%M"))
+        logging.info(f'Начало проверки таблицы  {table_obj.schema}.{table_obj.table}  select analyze_statistics(\'{table_obj.schema}.{table_obj.table}\')')
+        logging.info(time.strftime("%Y-%m-%d %H:%M"))
         script = read_file_content(
         f'{path}/sql/work_with_meta/{dialect.lower()}/analyze_statistics.sql').format(
         table=table_obj.table, schema=table_obj.schema)
@@ -84,12 +84,12 @@ def main():
         else:
             logging.warning(f'Таблица {table_obj.schema}.{table_obj.table} пустая')
             empty_tables.append(f'{table_obj.schema}.{table_obj.table}')
-            print(empty_tables)
+            logging.info(empty_tables)
 
-    print(f'Check Results in `QualityChecker/reports/{report_name}_{b}.xlsx')
-    print(empty_tables)
-    print(b)
-    print(time.strftime("%Y-%m-%d_%H-%M"))
+    logging.info(f'Check Results in `QualityChecker/reports/{report_name}_{b}.xlsx')
+    logging.info(empty_tables)
+    logging.info(b)
+    logging.info(time.strftime("%Y-%m-%d_%H-%M"))
 
 
 if __name__ == '__main__':
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     ENV = ''
     dialect = ''
     checks_list = []
-    print("Какое окружение?\n",
+    logging.info("Какое окружение?\n",
           "[1] DEV\n",
           "[2] TEST\n",
           "[3] PROD\n",)
@@ -110,7 +110,7 @@ if __name__ == '__main__':
         ENV = 'PROD'
     else:
         raise TypeError
-    print("Какой диалект нужен?\n",
+    logging.info("Какой диалект нужен?\n",
         "[1] - Vertica\n",
         "[2] - Greenplum\n")
     response = int(input())
@@ -122,7 +122,7 @@ if __name__ == '__main__':
         connection = greenplum_conn_dict[ENV]
     else:
         raise TypeError
-    print("Перечислите через запятую номера проверок\n",
+    logging.info("Перечислите через запятую номера проверок\n",
           "0. Все\n"
           "1. Дубли по ключам\n",
           "2. Полностью пустые столбцы (NULL или '')\n",
@@ -142,16 +142,16 @@ if __name__ == '__main__':
     if 0 in checks_list:
         checks_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 
-    print("Вы хотите использовать скрипт для получения таблиц из директории или ввести его здесь?\n",
+    logging.info("Вы хотите использовать скрипт для получения таблиц из директории или ввести его здесь?\n",
           "[1] - Из директории",
           "[2] - Ввести тут",)
     response = int(input())
     if response == 1:
         query = None
     elif response == 2:
-        print("Введите запрос. Запрос должен быть введен одной строкой.")
+        logging.info("Введите запрос. Запрос должен быть введен одной строкой.")
         query = str(input())
     else:
         raise TypeError
-    print(ENV, dialect, checks_list)
+    logging.info(ENV, dialect, checks_list)
     main()

@@ -1,5 +1,6 @@
 import vertica_python  # type: ignore
 import psycopg2  # type: ignore
+import logging
 
 from utils.utils  import to_flat_list, read_file_content
 
@@ -53,7 +54,7 @@ def run_sql(dialect: str, sql_script: str, conn_dict: dict):
                 result = None
             return result
         except Exception as error:
-            print(f"Error executing Greenplum script: {error}")
+            logging.INFO((f"Error executing Greenplum script: {error}"))
             raise
         finally:
             if cur:

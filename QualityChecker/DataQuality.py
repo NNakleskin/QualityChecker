@@ -1,6 +1,7 @@
 import traceback
 import pandas  # type: ignore
 import os
+import logging
 
 from checks import max_length, check_pk_doubles, not_utf8, check_insert_new_rows, \
     check_most_consistent_value, check_columns_length_statistics, check_max_tech_load_ts, check_row_count, \
@@ -86,11 +87,11 @@ class DataQuality:
             self.col_schema_df.append(self.schema)
             self.col_df.append(col)
         if 1 in self.checks:
-            print('1. Проверка дублей по ключу')
+            logging.info('1. Проверка дублей по ключу')
             self.check_pk_doubles_df.append(check_pk_doubles(dialect, self.schema, self.table, connection))
 
         if 2 in self.checks:
-            print('2. Полностью пустые')
+            logging.info('2. Полностью пустые')
             cnt = 0
             for col in all_columns_list:
                 result = to_flat_list(check_null_fields(dialect, self.schema, self.table, col, connection))
@@ -100,7 +101,7 @@ class DataQuality:
             self.count_null_cols_df.append(cnt)
 
         if 3 in self.checks:
-            print('3. Проверка максимальных длин полей')
+            logging.info('3. Проверка максимальных длин полей')
             cnt = 0
             for col in all_columns_list:
                 if col in text_columns_list:
@@ -113,7 +114,7 @@ class DataQuality:
             self.count_max_length_df.append(cnt)
 
         if 4 in self.checks:
-            print('4. Проверка есть ли UTF-8 символы')
+            logging.info('4. Проверка есть ли UTF-8 символы')
             cnt = 0
             for col in all_columns_list:
                 result = to_flat_list(not_utf8(dialect, self.schema, self.table, col, connection))
@@ -126,24 +127,24 @@ class DataQuality:
             self.count_not_utf8_cols_df.append(cnt)
 
         if 5 in self.checks:
-            print('5. Максимальная tech_load_ts ODS')
+            logging.info('5. Максимальная tech_load_ts ODS')
             self.check_max_tech_load_ts_df.append(check_max_tech_load_ts(dialect, self.schema, self.table, connection)[0])
 
         if 6 in self.checks:
-            print('6.DRAFT Проверка корректности инкремента')
+            logging.info('6.DRAFT Проверка корректности инкремента')
             try:
                 check_insert_new_rows(dialect, self.schema, self.table, connection)
             except:
-                print('Ошибка:\n', traceback.format_exc())
-        print(self.schema)
+                logging.info('Ошибка:\n', traceback.format_exc())
+        logging.info(self.schema)
         if 7 in self.checks:
-            print('7. Самое часто встречающееся значание')
+            logging.info('7. Самое часто встречающееся значание')
             for col in all_columns_list:
                 self.stat_most_cons_val_df.append(
                     to_flat_list(check_most_consistent_value(dialect, self.schema, self.table, col, connection))[0])
 
         if 8 in self.checks:
-            print('8. Статистика длины текстовых полей')
+            logging.info('8. Статистика длины текстовых полей')
             for col in all_columns_list:
                 if col in text_columns_list:
                     self.check_columns_length_statistics_result_df.append(
@@ -151,30 +152,30 @@ class DataQuality:
                 else:
                     self.check_columns_length_statistics_result_df.append('-')
         if 9 in self.checks:
-            print('9. Сегментация')
+            logging.info('9. Сегментация')
             self.check_segmentation_df.append(check_segmentation(dialect, self.schema, self.table, connection))
 
         if 10 in self.checks:
-            print('10. Количество STG')
+            logging.info('10. Количество STG')
             stg_schema = self.schema.replace('ODS_', 'STG_')
             self.check_row_count_stg_df.append(check_row_count(dialect, stg_schema, self.table, connection)[0])
 
         if 11 in self.checks:
-            print('11. Количество ODS')
+            logging.info('11. Количество ODS')
             self.check_row_count_ods_df.append(check_row_count(dialect, self.schema, self.table, connection)[0])
 
         if 12 in self.checks:
-            print('12. Количество бизнес ключей в ods')
+            logging.info('12. Количество бизнес ключей в ods')
             self.check_bussines_key_counts_df.append(check_bussines_key_counts(dialect, self.schema, self.table, connection))
 
         if 13 in self.checks:
-            print('13. Дубли по ключу в stg')
+            logging.info('13. Дубли по ключу в stg')
             stg_schema = self.schema.replace('ODS_', 'STG_')
 
             self.check_stg_pk_doubles_df.append(check_pk_doubles(dialect, stg_schema, self.table, connection))
 
         if 14 in self.checks:
-            print('14. Максимальная tech_load_ts STG')
+            logging.info('14. Максимальная tech_load_ts STG')
             stg_schema = self.schema.replace('ODS_', 'STG_')
             self.check_max_tech_load_ts_stg_df.append(check_max_tech_load_ts(dialect, stg_schema, self.table, connection)[0])
 

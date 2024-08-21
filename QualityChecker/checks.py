@@ -80,7 +80,7 @@ def check_pk_doubles(dialect, schema, table, vertica_conn_dict):
         check_pk_script = read_file_content(check_pk_double_path).format(table=table, schema=schema, pk=pk_columns_str)
 
         result = to_flat_list(run_sql(dialect, check_pk_script, vertica_conn_dict))
-        print(check_pk_script)
+        logging.info(check_pk_script)
         if bool(result) and result[0] != 0:
             logging.warning(f"""{result} шт дублей по ключу в {table}!!!!
                                     Скрипт для проверки: 
@@ -161,7 +161,7 @@ def check_insert_new_rows(dialect, schema, table, vertica_conn_dict):
                 logging.warning(f'Инкремент Возможно хороший')
             else:
                 logging.warning(f'Какая то хуйня')
-                print(check_insert_new_rows_script)
+                logging.info(check_insert_new_rows_script)
 
 def check_insert_new_rows(dialect, schema, table, vertica_conn_dict):
     ods_schema = schema
@@ -213,7 +213,7 @@ def check_insert_new_rows(dialect, schema, table, vertica_conn_dict):
                 logging.warning(f'Инкремент Возможно хороший')
             else:
                 logging.warning(f'Какая то хуйня')
-                print(check_insert_new_rows_script)
+                logging.info(check_insert_new_rows_script)
 
 def check_segmentation(dialect, schema, table, vertica_conn_dict):
     if bool(run_sql(dialect, f'select 1 from {schema}.{table} limit 1', vertica_conn_dict)):
@@ -249,9 +249,9 @@ def check_bussines_key_counts(dialect, schema, table, vertica_conn_dict):
         logging.info('Первичный ключ есть')
         pk_columns_list = to_flat_list(pk_columns)
         pk_columns_str = ', '.join([f'{col}' for col in pk_columns_list])
-        print(pk_columns_str)
+        logging.info(pk_columns_str)
         pk_columns_str_wo_ts = pk_columns_str.replace(', tech_load_ts','')
-        print(pk_columns_str_wo_ts)
+        logging.info(pk_columns_str_wo_ts)
         check_pk_double_path = f'{path}/sql/DQ/ansi/check_bussines_key_counts.sql'
         check_pk_script = read_file_content(check_pk_double_path).format(table=table, schema=schema, pk=pk_columns_str_wo_ts)
 
