@@ -1,7 +1,7 @@
 import os
 
 
-def to_flat_list(list):
+def to_flat_list(list: list) -> list:
     """
     Преобразует вложенный список в плоский список.
 
@@ -22,7 +22,7 @@ def to_flat_list(list):
     return flat_list
 
 
-def read_file_content(*args):
+def read_file_content(*args) -> str:
     """
     Возвращает содержимое файла в виде строки.
 

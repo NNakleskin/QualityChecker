@@ -49,7 +49,7 @@ class DataQuality:
         self.schema = obj[0]
         self.table = obj[1]
 
-    def execute_checks(self, dialect, path, connection):
+    def execute_checks(self, dialect: str, path: str, connection: dict) -> None:
         """
         Выполняет набор проверок данных для заданной таблицы в базе данных и сохраняет результаты.
 
@@ -180,7 +180,7 @@ class DataQuality:
             self.check_max_tech_load_ts_stg_df.append(check_max_tech_load_ts(dialect, stg_schema, self.table, connection)[0])
 
 
-    def create_xlsx(self, path: str, report_name: str, b: str):
+    def create_xlsx(self, path: str, report_name: str, b: str) -> None:
         """
         Создает или обновляет отчет в формате Excel с двумя листами на основе текущих данных и проверок.
 

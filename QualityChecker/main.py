@@ -30,7 +30,7 @@ from DataQuality import DataQuality
 # -------------------------------------------------------------
 
 
-def get_tables(path: str, query):
+def get_tables(path: str, query: str) -> list:
     """
     Выполняет SQL-запрос для получения списка таблиц и возвращает результат.
 

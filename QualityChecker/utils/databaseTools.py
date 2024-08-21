@@ -6,7 +6,7 @@ from utils.utils  import to_flat_list, read_file_content
 
 
 
-def run_sql(dialect: str, sql_script: str, conn_dict: dict):
+def run_sql(dialect: str, sql_script: str, conn_dict: dict) -> list:
     """
     Выполняет SQL-запрос в базе данных, используя указанный диалект и параметры подключения.
 
@@ -66,7 +66,7 @@ def run_sql(dialect: str, sql_script: str, conn_dict: dict):
 
 
 
-def select_columns(dialect, cur_path, col_type,  schema, table, connection):
+def select_columns(dialect: str, cur_path: str, col_type: str,  schema: str, table: str, connection: dict) -> list:
     """
     Получает список столбцов из заданной таблицы базы данных в зависимости от типа столбцов и базы данных.
 
@@ -85,7 +85,7 @@ def select_columns(dialect, cur_path, col_type,  schema, table, connection):
         Схема базы данных, содержащая таблицу.
     table : str
         Имя таблицы, из которой необходимо выбрать столбцы.
-    connection : object
+    connection : dict
         Соединение с базой данных для выполнения запроса.
 
     Возвращает:
