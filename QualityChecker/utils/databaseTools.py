@@ -44,8 +44,7 @@ def run_sql(dialect: str, sql_script: str, conn_dict: dict) -> list:
             return result
 
     elif dialect == 'Greenplum':
-        try:
-            connection = psycopg2.connect(**conn_dict)
+        with psycopg2.connect(**conn_dict) as connection:
             cur = connection.cursor()
             cur.execute(sql_script)
             if cur.rowcount > 0:
@@ -53,14 +52,6 @@ def run_sql(dialect: str, sql_script: str, conn_dict: dict) -> list:
             else:
                 result = None
             return result
-        except Exception as error:
-            logging.INFO((f"Error executing Greenplum script: {error}"))
-            raise
-        finally:
-            if cur:
-                cur.close()
-            if connection:
-                connection.close()
     else:
         raise ValueError(f"Unsupported dialect: {dialect}")
 
