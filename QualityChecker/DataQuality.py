@@ -3,6 +3,9 @@ import pandas  # type: ignore
 import os
 import logging
 
+
+from typing import List, Dict
+from functools import partial
 from checks import max_length, check_pk_doubles, not_utf8, check_insert_new_rows, \
     check_most_consistent_value, check_columns_length_statistics, check_max_tech_load_ts, check_row_count, \
     check_null_fields, check_segmentation, check_bussines_key_counts
@@ -49,13 +52,10 @@ class DataQuality:
         self.schema = obj[0]
         self.table = obj[1]
 
-    def execute_checks(self, dialect: str, path: str, connection: dict) -> None:
+
+    def execute_checks(self, dialect: str, path: str, connection: Dict) -> None:
         """
         Выполняет набор проверок данных для заданной таблицы в базе данных и сохраняет результаты.
-
-        Функция выполняет несколько предопределенных проверок на данных таблицы, такие как проверка дублей по ключу,
-        подсчет пустых полей, проверка максимальной длины текстовых полей, наличие не-UTF-8 символов и другие.
-        Результаты проверок сохраняются в соответствующие атрибуты объекта.
 
         Параметры:
         ----------
@@ -63,122 +63,259 @@ class DataQuality:
             Диалект базы данных (например, 'Vertica', 'Greenplum'), который используется для выполнения запросов.
         path : str
             Путь к директории, содержащей SQL-запросы и другие необходимые файлы.
-        connection : object
+        connection : dict
             Подключение к базе данных, используемое для выполнения SQL-запросов.
 
         Возвращает:
         -----------
         None
             Функция не возвращает значений, результаты проверок сохраняются в атрибутах объекта.
-
-        Примечания:
-        ----------
-        - В зависимости от набора проверок, определенного в self.checks, функция выполняет разные операции.
-        - Результаты проверок сохраняются в виде списков в атрибутах объекта, таких как `self.col_df`, `self.not_null_df`, `self.max_length_df` и других.
-        - Некоторые проверки специфичны для определенных типов столбцов (например, текстовых).
-        - При возникновении ошибок в процессе проверки корректности инкремента (check_insert_new_rows) будет выведено сообщение об ошибке.
         """
         self.table_df.append(self.table)
         self.schema_df.append(self.schema)
+        
         all_columns_list = select_columns(dialect, path, 'all', self.schema, self.table, connection)
         text_columns_list = select_columns(dialect, path, 'text', self.schema, self.table, connection)
+        
         for col in all_columns_list:
             self.col_table_df.append(self.table)
             self.col_schema_df.append(self.schema)
             self.col_df.append(col)
-        if 1 in self.checks:
-            logging.info('1. Проверка дублей по ключу')
-            self.check_pk_doubles_df.append(check_pk_doubles(dialect, self.schema, self.table, connection))
 
-        if 2 in self.checks:
-            logging.info('2. Полностью пустые')
-            cnt = 0
-            for col in all_columns_list:
-                result = to_flat_list(check_null_fields(dialect, self.schema, self.table, col, connection))
-                self.not_null_df.append(result[0])
+        check_functions = {
+            1: lambda: self.check_pk_doubles_df.append(check_pk_doubles(dialect, self.schema, self.table, connection)),
+            2: lambda: self._check_null_fields(all_columns_list, dialect, connection),
+            3: lambda: self._check_max_lengths(all_columns_list, text_columns_list, dialect, connection),
+            4: lambda: self._check_utf8(all_columns_list, text_columns_list, dialect, connection),
+            5: lambda: self.check_max_tech_load_ts_df.append(check_max_tech_load_ts(dialect, self.schema, self.table, connection)[0]),
+            6: lambda: self._check_increment_correctness(dialect, connection),
+            7: lambda: self._check_most_consistent_value(all_columns_list, dialect, connection),
+            8: lambda: self._check_text_length_statistics(all_columns_list, text_columns_list, dialect, connection),
+            9: lambda: self.check_segmentation_df.append(check_segmentation(dialect, self.schema, self.table, connection)),
+            10: lambda: self._check_stg_row_count(dialect, connection),
+            11: lambda: self.check_row_count_ods_df.append(check_row_count(dialect, self.schema, self.table, connection)[0]),
+            12: lambda: self.check_bussines_key_counts_df.append(check_bussines_key_counts(dialect, self.schema, self.table, connection)),
+            13: lambda: self._check_stg_pk_doubles(dialect, connection),
+            14: lambda: self._check_max_tech_load_ts_stg(dialect, connection)
+        }
+
+        for check_id in self.checks:
+            if check_id in check_functions:
+                logging.info(f'{check_id}. Выполнение проверки {check_id}')
+                check_functions[check_id]()
+
+    def _check_null_fields(self, all_columns_list: List[str], dialect: str, connection: Dict) -> None:
+        """
+        Проверяет наличие полностью пустых столбцов и сохраняет результаты.
+
+        Параметры:
+        ----------
+        all_columns_list : List[str]
+            Список всех столбцов в таблице.
+        dialect : str
+            Диалект базы данных (например, 'Vertica', 'Greenplum').
+        connection : dict
+            Подключение к базе данных.
+
+        Возвращает:
+        -----------
+        None
+            Результаты проверки сохраняются в соответствующих атрибутах объекта.
+        """
+        cnt = 0
+        for col in all_columns_list:
+            result = to_flat_list(check_null_fields(dialect, self.schema, self.table, col, connection))
+            self.not_null_df.append(result[0])
+            if result[0] == 1:
+                cnt += 1
+        self.count_null_cols_df.append(cnt)
+
+    def _check_max_lengths(self, all_columns_list: List[str], text_columns_list: List[str], dialect: str, connection: Dict) -> None:
+        """
+        Проверяет максимальную длину текстовых полей и сохраняет результаты.
+
+        Параметры:
+        ----------
+        all_columns_list : List[str]
+            Список всех столбцов в таблице.
+        text_columns_list : List[str]
+            Список текстовых столбцов в таблице.
+        dialect : str
+            Диалект базы данных.
+        connection : dict
+            Подключение к базе данных.
+
+        Возвращает:
+        -----------
+        None
+            Результаты проверки сохраняются в соответствующих атрибутах объекта.
+        """
+        cnt = 0
+        for col in all_columns_list:
+            if col in text_columns_list:
+                result = to_flat_list(max_length(dialect, self.schema, self.table, col, connection))
+                self.max_length_df.append(result[0])
                 if result[0] == 1:
-                    cnt = cnt + 1
-            self.count_null_cols_df.append(cnt)
+                    cnt += 1
+            else:
+                self.max_length_df.append('-')
+        self.count_max_length_df.append(cnt)
 
-        if 3 in self.checks:
-            logging.info('3. Проверка максимальных длин полей')
-            cnt = 0
-            for col in all_columns_list:
-                if col in text_columns_list:
-                    result = to_flat_list(max_length(dialect, self.schema, self.table, col, connection))
-                    self.max_length_df.append(result[0])
-                    if result[0] == 1:
-                        cnt = cnt + 1
-                else:
-                    self.max_length_df.append('-')
-            self.count_max_length_df.append(cnt)
+    def _check_utf8(self, all_columns_list: List[str], text_columns_list: List[str], dialect: str, connection: Dict) -> None:
+        """
+        Проверяет наличие не-UTF-8 символов в текстовых полях и сохраняет результаты.
 
-        if 4 in self.checks:
-            logging.info('4. Проверка есть ли UTF-8 символы')
-            cnt = 0
-            for col in all_columns_list:
-                result = to_flat_list(not_utf8(dialect, self.schema, self.table, col, connection))
-                if col in text_columns_list:
-                    self.not_utf8_df.append(result[0])
-                else:
-                    self.not_utf8_df.append('-')
-                if result[0] == 1:
-                    cnt = cnt + 1
-            self.count_not_utf8_cols_df.append(cnt)
+        Параметры:
+        ----------
+        all_columns_list : List[str]
+            Список всех столбцов в таблице.
+        text_columns_list : List[str]
+            Список текстовых столбцов в таблице.
+        dialect : str
+            Диалект базы данных.
+        connection : dict
+            Подключение к базе данных.
 
-        if 5 in self.checks:
-            logging.info('5. Максимальная tech_load_ts ODS')
-            self.check_max_tech_load_ts_df.append(check_max_tech_load_ts(dialect, self.schema, self.table, connection)[0])
+        Возвращает:
+        -----------
+        None
+            Результаты проверки сохраняются в соответствующих атрибутах объекта.
+        """
+        cnt = 0
+        for col in all_columns_list:
+            result = to_flat_list(not_utf8(dialect, self.schema, self.table, col, connection))
+            if col in text_columns_list:
+                self.not_utf8_df.append(result[0])
+            else:
+                self.not_utf8_df.append('-')
+            if result[0] == 1:
+                cnt += 1
+        self.count_not_utf8_cols_df.append(cnt)
 
-        if 6 in self.checks:
-            logging.info('6.DRAFT Проверка корректности инкремента')
-            try:
-                check_insert_new_rows(dialect, self.schema, self.table, connection)
-            except:
-                logging.info('Ошибка:\n', traceback.format_exc())
-        logging.info(self.schema)
-        if 7 in self.checks:
-            logging.info('7. Самое часто встречающееся значание')
-            for col in all_columns_list:
-                self.stat_most_cons_val_df.append(
-                    to_flat_list(check_most_consistent_value(dialect, self.schema, self.table, col, connection))[0])
+    def _check_increment_correctness(self, dialect: str, connection: Dict) -> None:
+        """
+        Проверяет корректность инкремента и выводит сообщение об ошибке в случае неудачи.
 
-        if 8 in self.checks:
-            logging.info('8. Статистика длины текстовых полей')
-            for col in all_columns_list:
-                if col in text_columns_list:
-                    self.check_columns_length_statistics_result_df.append(
-                        to_flat_list(check_columns_length_statistics(dialect, self.schema, self.table, col, connection))[0])
-                else:
-                    self.check_columns_length_statistics_result_df.append('-')
-        if 9 in self.checks:
-            logging.info('9. Сегментация')
-            self.check_segmentation_df.append(check_segmentation(dialect, self.schema, self.table, connection))
+        Параметры:
+        ----------
+        dialect : str
+            Диалект базы данных.
+        connection : dict
+            Подключение к базе данных.
 
-        if 10 in self.checks:
-            logging.info('10. Количество STG')
-            stg_schema = self.schema.replace('ODS_', 'STG_')
-            self.check_row_count_stg_df.append(check_row_count(dialect, stg_schema, self.table, connection)[0])
+        Возвращает:
+        -----------
+        None
+            Если возникает ошибка, она логируется.
+        """
+        try:
+            check_insert_new_rows(dialect, self.schema, self.table, connection)
+        except Exception:
+            logging.info('Ошибка:\n', traceback.format_exc())
 
-        if 11 in self.checks:
-            logging.info('11. Количество ODS')
-            self.check_row_count_ods_df.append(check_row_count(dialect, self.schema, self.table, connection)[0])
+    def _check_most_consistent_value(self, all_columns_list: List[str], dialect: str, connection: Dict) -> None:
+        """
+        Проверяет самое часто встречающееся значение в каждом столбце и сохраняет результаты.
 
-        if 12 in self.checks:
-            logging.info('12. Количество бизнес ключей в ods')
-            self.check_bussines_key_counts_df.append(check_bussines_key_counts(dialect, self.schema, self.table, connection))
+        Параметры:
+        ----------
+        all_columns_list : List[str]
+            Список всех столбцов в таблице.
+        dialect : str
+            Диалект базы данных.
+        connection : dict
+            Подключение к базе данных.
 
-        if 13 in self.checks:
-            logging.info('13. Дубли по ключу в stg')
-            stg_schema = self.schema.replace('ODS_', 'STG_')
+        Возвращает:
+        -----------
+        None
+            Результаты проверки сохраняются в соответствующих атрибутах объекта.
+        """
+        for col in all_columns_list:
+            self.stat_most_cons_val_df.append(
+                to_flat_list(check_most_consistent_value(dialect, self.schema, self.table, col, connection))[0])
 
-            self.check_stg_pk_doubles_df.append(check_pk_doubles(dialect, stg_schema, self.table, connection))
+    def _check_text_length_statistics(self, all_columns_list: List[str], text_columns_list: List[str], dialect: str, connection: Dict) -> None:
+        """
+        Проверяет статистику длины текстовых полей и сохраняет результаты.
 
-        if 14 in self.checks:
-            logging.info('14. Максимальная tech_load_ts STG')
-            stg_schema = self.schema.replace('ODS_', 'STG_')
-            self.check_max_tech_load_ts_stg_df.append(check_max_tech_load_ts(dialect, stg_schema, self.table, connection)[0])
+        Параметры:
+        ----------
+        all_columns_list : List[str]
+            Список всех столбцов в таблице.
+        text_columns_list : List[str]
+            Список текстовых столбцов в таблице.
+        dialect : str
+            Диалект базы данных.
+        connection : dict
+            Подключение к базе данных.
 
+        Возвращает:
+        -----------
+        None
+            Результаты проверки сохраняются в соответствующих атрибутах объекта.
+        """
+        for col in all_columns_list:
+            if col in text_columns_list:
+                self.check_columns_length_statistics_result_df.append(
+                    to_flat_list(check_columns_length_statistics(dialect, self.schema, self.table, col, connection))[0])
+            else:
+                self.check_columns_length_statistics_result_df.append('-')
+
+    def _check_stg_row_count(self, dialect: str, connection: Dict) -> None:
+        """
+        Проверяет количество строк в STG и сохраняет результаты.
+
+        Параметры:
+        ----------
+        dialect : str
+            Диалект базы данных.
+        connection : dict
+            Подключение к базе данных.
+
+        Возвращает:
+        -----------
+        None
+            Результаты проверки сохраняются в соответствующих атрибутах объекта.
+        """
+        stg_schema = self.schema.replace('ODS_', 'STG_')
+        self.check_row_count_stg_df.append(check_row_count(dialect, stg_schema, self.table, connection)[0])
+
+    def _check_stg_pk_doubles(self, dialect: str, connection: Dict) -> None:
+        """
+        Проверяет дублирующиеся первичные ключи в STG и сохраняет результаты.
+        Параметры:
+        ----------
+        dialect : str
+            Диалект базы данных.
+        connection : dict
+            Подключение к базе данных.
+
+        Возвращает:
+        -----------
+        None
+            Результаты проверки сохраняются в соответствующих атрибутах объекта.
+        """
+        stg_schema = self.schema.replace('ODS_', 'STG_')
+        self.check_stg_pk_doubles_df.append(check_pk_doubles(dialect, stg_schema, self.table, connection))
+
+    def _check_max_tech_load_ts_stg(self, dialect: str, connection: Dict) -> None:
+        """
+        Проверяет максимальное техническое время загрузки в STG и сохраняет результаты.
+        Параметры:
+        ----------
+        dialect : str
+            Диалект базы данных.
+        connection : dict
+            Подключение к базе данных.
+
+        Возвращает:
+        -----------
+        None
+            Результаты проверки сохраняются в соответствующих атрибутах объекта.
+        """
+        stg_schema = self.schema.replace('ODS_', 'STG_')
+        self.check_max_tech_load_ts_stg_df.append(check_max_tech_load_ts(dialect, stg_schema, self.table, connection)[0])   
 
     def create_xlsx(self, path: str, report_name: str, b: str) -> None:
         """
