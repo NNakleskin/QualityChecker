@@ -41,6 +41,7 @@ def run_sql(dialect: str, sql_script: str, conn_dict: dict) -> list:
             cur = connection.cursor()
             cur.execute(sql_script)
             result = cur.fetchall()
+            connection.commit()
             return result
 
     elif dialect == 'Greenplum':
@@ -51,6 +52,7 @@ def run_sql(dialect: str, sql_script: str, conn_dict: dict) -> list:
                 result = cur.fetchall()
             else:
                 result = None
+            connection.commit()
             return result
     else:
         raise ValueError(f"Unsupported dialect: {dialect}")
